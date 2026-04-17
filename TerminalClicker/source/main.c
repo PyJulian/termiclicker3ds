@@ -70,7 +70,8 @@ int main(int argc, char **argv)
 	int tut = 0; // What part of the tutorial the user is on
 	float progress = 0; // Progress percentage
 	bool sav = 0; // Save progress
-	bool dev = false;
+	bool dev = false; // Dev mode on I think
+	bool FORCEREFRESH = true; // Force rerender the screen instead of waiting for input
 
 	size_t save_size = sizeof(long long) + (6 * sizeof(int)); // Savefile data size
 	char *savefiledata = (char *)malloc(1000 * save_size); // Savefile data string
@@ -79,8 +80,6 @@ int main(int argc, char **argv)
 	fsInit();
 
 	PrintConsole topScreen, bottomScreen;
-
-
 
 	consoleInit(GFX_TOP, &topScreen);
 	consoleInit(GFX_BOTTOM, &bottomScreen);
@@ -92,14 +91,129 @@ int main(int argc, char **argv)
 		static char mybuf[60];
 		SwkbdButton button = SWKBD_BUTTON_NONE;
 
+		hidScanInput();
+		u32 kDown = hidKeysDown();
+
 		multi = 1 + (duper + index + sub + rob + gen + fraud);
 		progress = (duper + index + sub + rob + gen + fraud) * 0.01668335001;
 
 		sprintf(savefiledata, "%d|%d|%d|%d|%d|%d|%lld", duper, index, sub, rob, gen, fraud, cash);
 
+		if (code == true) {
+			if (strcmp(mybuf, "2008") == 0) cash = 99999999999999LL;
+			else if (strcmp(mybuf, "2007") == 0) cash = 0;
+			else if (strcmp(mybuf, "12") == 0) duper = 990;
+			else if (strcmp(mybuf, "122") == 0) index = 990;
+			else if (strcmp(mybuf, "1222") == 0) sub = 990;
+			else if (strcmp(mybuf, "12222") == 0) rob = 990;
+			else if (strcmp(mybuf, "122222") == 0) gen = 990;
+			else if (strcmp(mybuf, "1222222") == 0) fraud = 990;
+			else if (strcmp(mybuf, "130") == 0) progress = 100;
+			else if (strcmp(mybuf, "83") == 0) dev = true;
+			FORCEREFRESH = true;
+			code = false;
+		} // Cheatcode System, you can find all of them easely if you know how to read xd
+
+		if (kDown & KEY_B && dev == true) free(savefiledata);
+
+		if (kDown & KEY_START) {
+			if (sceen == 0 && select == 6) break;
+			sceen = 0;
+			select = 6;
+			//break;
+		}
+		else if (kDown & KEY_A) {
+			if (select == 0) cash = cash + multi;
+
+			else if (select == 1) {
+				if (sceen == 0) {
+					select = 1;
+					sceen = 1;
+				}
+				else if (cash > 14 && duper < 999) {
+					duper = duper + 1;
+					cash = cash - 15;
+				}
+			}
+			else if (select == 2) {
+				if (sceen == 0) {
+					swkbdInit(&swkbd, SWKBD_TYPE_NUMPAD, 1, 8);
+					swkbdSetPasswordMode(&swkbd, SWKBD_PASSWORD_HIDE_DELAY);
+					swkbdSetValidation(&swkbd, SWKBD_ANYTHING, 0, 0);
+					swkbdSetFeatures(&swkbd, SWKBD_FIXED_WIDTH);
+					// swkbdSetNumpadKeys(&swkbd, L'ツ', L'益');
+					button = swkbdInputText(&swkbd, mybuf, sizeof(mybuf));
+					code = true;
+				}
+				else if (cash > 99 && index < 999) {
+					index = index + 1;
+					cash = cash - 100;
+				}
+			}
+			else if (select == 3) {
+				if (sceen == 0) select = 0;
+				else if (cash > 4999 && sub < 999) {
+					sub = sub + 1;
+					cash = cash - 5000;
+				}
+			}
+			else if (select == 4) {
+				if (sceen == 0) {
+					writeSaveToFile("sdmc:/termiclicker.dat", savefiledata);
+					free(savefiledata);
+					savefiledata = (char *)malloc(1000 * save_size);
+					sav = true;
+				}
+				else if (cash > 99999 && rob < 999) {
+					rob = rob + 1;
+					cash = cash - 100000;
+				}
+			}
+			else if (select == 5) {
+				if (sceen == 0) {
+					readSaveFromFile("sdmc:/termiclicker.dat", &sceen, &duper, &index, &sub, &rob, &gen, &fraud, &cash);
+					free(savefiledata);
+					savefiledata = (char *)malloc(1000 * save_size);
+					sav = true;
+				}
+				else if (cash > 999999 && gen < 999) {
+					gen = gen + 1;
+					cash = cash - 1000000;
+				}
+			}
+			else if (select == 6) {
+				if (sceen == 0) break;
+				else if (cash > 9999999 && fraud < 999) {
+					fraud = fraud + 1;
+					cash = cash - 10000000;
+				}
+			}
+			
+		}
+		else if (kDown & KEY_Y) {
+			if (select == 0) select = 1;
+			else {
+				select = 1;
+				sceen = 0;
+			}
+		}
+		else if (kDown & KEY_X) tut = 99999;
+		else if (kDown & KEY_UP) {
+			sav = false;
+			if (select > 1) select = select - 1;
+		}
+		else if (kDown & KEY_DOWN) {
+			sav = false;
+			if (sceen == 0) {if (select > 0 && select < 6) select = select + 1;}
+			else {if (select > 0 && select < 6) select = select + 1;}
+		}
+
+		if (kDown != 0 || FORCEREFRESH) {
+			FORCEREFRESH = false;
+
 		consoleSelect(&topScreen);
 		printf("\033[2J\033[1;1H"); // Clear Screen
-		printf("\x1b[47;30m3ds Terminal Clicker                              \x1b[0m\n"); // Top Bar
+		printf("\x1b[47;30m3ds Terminal Clicker (v1 Patch)                   \x1b[0m\n"); // Top Bar
 		printf(" Money: $%lld\n", cash);
 		printf(" Game Progress: %f%%\n", progress);
 		printf("\n\x1b[47;30mUpgrades                                          \x1b[0m\n"); // Upgrade Bar
@@ -170,117 +284,6 @@ int main(int argc, char **argv)
 		else printf(" Quit Game (START)\n");
 
 		printf("\n\x1b[47;30mAbout                                   \x1b[0m\n Created by PyJulian on Github\n https://github.com/pyjulian");
-
-		if (code == true) {
-			if (strcmp(mybuf, "2008") == 0) cash = 99999999999999LL;
-			else if (strcmp(mybuf, "2007") == 0) cash = 0;
-			else if (strcmp(mybuf, "12") == 0) duper = 990;
-			else if (strcmp(mybuf, "122") == 0) index = 990;
-			else if (strcmp(mybuf, "1222") == 0) sub = 990;
-			else if (strcmp(mybuf, "12222") == 0) rob = 990;
-			else if (strcmp(mybuf, "122222") == 0) gen = 990;
-			else if (strcmp(mybuf, "1222222") == 0) fraud = 990;
-			else if (strcmp(mybuf, "130") == 0) progress = 100;
-			else if (strcmp(mybuf, "83") == 0) dev = true;
-			code = false;
-		} // Cheatcode System, you can find all of them easely if you know how to read xd
-
-		hidScanInput();
-
-		u32 kDown = hidKeysDown();
-
-		if (kDown & KEY_B && dev == true) free(savefiledata);
-
-		if (kDown & KEY_START) {
-			if (sceen == 0 && select == 6) break;
-			sceen = 0;
-			select = 6;
-			//break;
-		}
-		else if (kDown & KEY_A) {
-			if (select == 0) cash = cash + multi;
-
-			else if (select == 1) {
-				if (sceen == 0) {
-					select = 1;
-					sceen = 1;
-				}
-				else if (cash > 14 && duper < 999) {
-					duper = duper + 1;
-					cash = cash - 15;
-				}
-			}
-			else if (select == 2) {
-				if (sceen == 0) {
-					swkbdInit(&swkbd, SWKBD_TYPE_NUMPAD, 1, 8);
-					swkbdSetPasswordMode(&swkbd, SWKBD_PASSWORD_HIDE_DELAY);
-					swkbdSetValidation(&swkbd, SWKBD_ANYTHING, 0, 0);
-					swkbdSetFeatures(&swkbd, SWKBD_FIXED_WIDTH);
-					swkbdSetNumpadKeys(&swkbd, L'ツ', L'益');
-					button = swkbdInputText(&swkbd, mybuf, sizeof(mybuf));
-					code = true;
-				}
-				else if (cash > 99 && index < 999) {
-					index = index + 1;
-					cash = cash - 100;
-				}
-			}
-			else if (select == 3) {
-				if (sceen == 0) select = 0;
-				else if (cash > 4999 && sub < 999) {
-					sub = sub + 1;
-					cash = cash - 5000;
-				}
-			}
-			else if (select == 4) {
-				if (sceen == 0) {
-					writeSaveToFile("sdmc:/termiclicker.dat", savefiledata);
-					free(savefiledata);
-					savefiledata = (char *)malloc(1000 * save_size);
-					sav = true;
-				}
-				else if (cash > 99999 && rob < 999) {
-					rob = rob + 1;
-					cash = cash - 100000;
-				}
-			}
-			else if (select == 5) {
-				if (sceen == 0) {
-					readSaveFromFile("sdmc:/termiclicker.dat", &sceen, &duper, &index, &sub, &rob, &gen, &fraud, &cash);
-					free(savefiledata);
-					savefiledata = (char *)malloc(1000 * save_size);
-					sav = true;
-				}
-				else if (cash > 999999 && gen < 999) {
-					gen = gen + 1;
-					cash = cash - 1000000;
-				}
-			}
-			else if (select == 6) {
-				if (sceen == 0) break;
-				else if (cash > 9999999 && fraud < 999) {
-					fraud = fraud + 1;
-					cash = cash - 10000000;
-				}
-			}
-			
-		}
-		else if (kDown & KEY_Y) {
-			if (select == 0) select = 1;
-			else {
-				select = 1;
-				sceen = 0;
-			}
-		}
-		else if (kDown & KEY_X) tut = 99999;
-		else if (kDown & KEY_UP) {
-			sav = false;
-			if (select > 1) select = select - 1;
-		}
-		else if (kDown & KEY_DOWN) {
-			sav = false;
-			if (sceen == 0) {if (select > 0 && select < 6) select = select + 1;}
-			else {if (select > 0 && select < 6) select = select + 1;}
 		}
 
 		gfxFlushBuffers();
